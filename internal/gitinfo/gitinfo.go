@@ -21,27 +21,23 @@ type Info struct {
 
 // Discover collects git metadata for the provided repository root.
 func Discover(path string) (Info, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return Info{}, fmt.Errorf("resolve path: %w", err)
-	}
-
-	if err := ensureGitRepo(abs); err != nil {
-		return Info{}, err
-	}
-
-	branch, err := CurrentBranch(abs)
+	root, err := FindRepoRoot(path)
 	if err != nil {
 		return Info{}, err
 	}
 
-	user, _ := gitString(abs, "config", "--get", "user.name")
-	email, _ := gitString(abs, "config", "--get", "user.email")
-	remote, _ := gitString(abs, "config", "--get", "remote.origin.url")
+	branch, err := CurrentBranch(root)
+	if err != nil {
+		return Info{}, err
+	}
+
+	user, _ := gitString(root, "config", "--get", "user.name")
+	email, _ := gitString(root, "config", "--get", "user.email")
+	remote, _ := gitString(root, "config", "--get", "remote.origin.url")
 
 	return Info{
-		Path:   abs,
-		Name:   filepath.Base(abs),
+		Path:   root,
+		Name:   filepath.Base(root),
 		Branch: branch,
 		User:   user,
 		Email:  email,
@@ -59,10 +55,39 @@ func CurrentBranch(path string) (string, error) {
 }
 
 func ensureGitRepo(path string) error {
-	if _, err := os.Stat(filepath.Join(path, ".git")); err != nil {
-		return fmt.Errorf("not a git repository: %w", err)
+	_, err := FindRepoRoot(path)
+	return err
+}
+
+// FindRepoRoot walks up from the provided path until it finds a directory containing a .git folder.
+func FindRepoRoot(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve path: %w", err)
 	}
-	return nil
+
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", fmt.Errorf("stat path: %w", err)
+	}
+
+	if !info.IsDir() {
+		abs = filepath.Dir(abs)
+	}
+
+	for {
+		if _, err := os.Stat(filepath.Join(abs, ".git")); err == nil {
+			return abs, nil
+		}
+
+		parent := filepath.Dir(abs)
+		if parent == abs {
+			break
+		}
+		abs = parent
+	}
+
+	return "", fmt.Errorf("not a git repository: %s", path)
 }
 
 func gitString(path string, args ...string) (string, error) {

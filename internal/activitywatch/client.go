@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"path"
 	"strings"
@@ -46,7 +47,6 @@ func (c *Client) RecordEvent(ctx context.Context, bucketID, bucketType string, e
 	payload := map[string]any{
 		"timestamp": event.Timestamp.UTC(),
 		"duration":  event.Duration.Seconds(),
-		"end":       event.End.UTC(),
 		"data":      event.Data,
 	}
 
@@ -56,6 +56,7 @@ func (c *Client) RecordEvent(ctx context.Context, bucketID, bucketType string, e
 	}
 
 	url := c.buildURL("api/0/buckets", bucketID, "events")
+	log.Printf("ActivityWatch: POST %s payload=%s", url, body)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
@@ -71,6 +72,8 @@ func (c *Client) RecordEvent(ctx context.Context, bucketID, bucketType string, e
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("post event failed: status %s", resp.Status)
 	}
+
+	log.Printf("ActivityWatch: recorded event bucket=%s duration=%s events=%v branch=%v", bucketID, event.Duration, event.Data["eventCount"], event.Data["branch"])
 
 	return nil
 }
@@ -105,7 +108,7 @@ func (c *Client) ensureBucket(ctx context.Context, bucketID, bucketType string) 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusConflict {
+	if resp.StatusCode == http.StatusConflict || resp.StatusCode == http.StatusNotModified {
 		c.bucketOnce.Store(bucketID, struct{}{})
 		return nil
 	}
@@ -115,6 +118,7 @@ func (c *Client) ensureBucket(ctx context.Context, bucketID, bucketType string) 
 	}
 
 	c.bucketOnce.Store(bucketID, struct{}{})
+	log.Printf("ActivityWatch: ensured bucket %s (type=%s)", bucketID, bucketType)
 
 	return nil
 }

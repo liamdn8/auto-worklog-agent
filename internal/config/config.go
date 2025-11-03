@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -26,6 +27,8 @@ type ActivityWatchConfig struct {
 // GitConfig configures git metadata resolution.
 type GitConfig struct {
 	Repositories []string `json:"repositories"`
+	Roots        []string `json:"roots"`
+	MaxDepth     int      `json:"maxDepth"`
 }
 
 // SessionConfig controls session detection behavior.
@@ -63,10 +66,17 @@ func (d jsonDuration) Duration() time.Duration {
 	return time.Duration(d.timeMS) * time.Millisecond
 }
 
+func newJSONDuration(d time.Duration) jsonDuration {
+	return jsonDuration{timeMS: int64(d.Milliseconds())}
+}
+
 // LoadConfig loads configuration from JSON file, falling back to defaults.
 func LoadConfig(path string) (Config, error) {
 	cfg := defaultConfig()
 	if path == "" {
+		if err := cfg.normalize(); err != nil {
+			return cfg, err
+		}
 		return cfg, nil
 	}
 
@@ -84,6 +94,10 @@ func LoadConfig(path string) (Config, error) {
 		return cfg, fmt.Errorf("parse config: %w", err)
 	}
 
+	if err := cfg.normalize(); err != nil {
+		return cfg, err
+	}
+
 	return cfg, nil
 }
 
@@ -91,6 +105,11 @@ func defaultConfig() Config {
 	repos := []string{}
 	if cwd, err := os.Getwd(); err == nil {
 		repos = append(repos, cwd)
+	}
+
+	roots := []string{}
+	if home, err := os.UserHomeDir(); err == nil {
+		roots = append(roots, home)
 	}
 
 	return Config{
@@ -101,11 +120,13 @@ func defaultConfig() Config {
 		},
 		Git: GitConfig{
 			Repositories: repos,
+			Roots:        roots,
+			MaxDepth:     5,
 		},
 		Session: SessionConfig{
 			IdleTimeoutMinutes: 30,
-			PollInterval:       jsonDuration{timeMS: int64((5 * time.Second).Milliseconds())},
-			FlushInterval:      jsonDuration{timeMS: int64((15 * time.Second).Milliseconds())},
+			PollInterval:       newJSONDuration(5 * time.Second),
+			FlushInterval:      newJSONDuration(15 * time.Second),
 		},
 	}
 }
@@ -122,6 +143,7 @@ func expandPath(path string) (string, error) {
 	if len(path) == 0 {
 		return path, nil
 	}
+	path = os.ExpandEnv(path)
 	if path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -130,4 +152,51 @@ func expandPath(path string) (string, error) {
 		return filepath.Join(home, path[1:]), nil
 	}
 	return path, nil
+}
+
+func expandPaths(paths []string) ([]string, error) {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" {
+			continue
+		}
+		expanded, err := expandPath(trimmed)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, filepath.Clean(expanded))
+	}
+	return out, nil
+}
+
+func (cfg *Config) normalize() error {
+	repos, err := expandPaths(cfg.Git.Repositories)
+	if err != nil {
+		return fmt.Errorf("expand git repositories: %w", err)
+	}
+	cfg.Git.Repositories = repos
+
+	roots, err := expandPaths(cfg.Git.Roots)
+	if err != nil {
+		return fmt.Errorf("expand git roots: %w", err)
+	}
+	cfg.Git.Roots = roots
+
+	// Zero or negative maxDepth means unlimited
+	if cfg.Git.MaxDepth < 0 {
+		cfg.Git.MaxDepth = 0
+	}
+
+	if cfg.ActivityWatch.BaseURL == "" {
+		cfg.ActivityWatch.BaseURL = "http://localhost:5600"
+	}
+	if cfg.ActivityWatch.BucketPrefix == "" {
+		cfg.ActivityWatch.BucketPrefix = "awagent"
+	}
+	if cfg.ActivityWatch.Machine == "" {
+		cfg.ActivityWatch.Machine = hostnameOrUnknown()
+	}
+
+	return nil
 }

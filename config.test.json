@@ -1,0 +1,12 @@
+{
+  "activityWatch": {
+    "baseURL": "http://localhost:5600",
+    "bucketPrefix": "awagent",
+    "machine": "test-linux"
+  },
+  "session": {
+    "idleTimeoutMinutes": 0,
+    "pollInterval": "1s",
+    "flushInterval": "2s"
+  }
+}

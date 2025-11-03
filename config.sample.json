@@ -2,12 +2,16 @@
   "activityWatch": {
     "baseURL": "http://localhost:5600",
     "bucketPrefix": "awagent",
-    "machine": "${HOSTNAME}"
+    "machine": "TEST-PC"
   },
   "git": {
     "repositories": [
       "/path/to/repository"
-    ]
+    ],
+    "roots": [
+      "${HOME}"
+    ],
+    "maxDepth": 5
   },
   "session": {
     "idleTimeoutMinutes": 30,
