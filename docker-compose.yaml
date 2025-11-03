@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  aw-server:
+    image: ghcr.io/activitywatch/aw-server:latest
+    container_name: aw-server
+    ports:
+      - "5600:5600"
+    volumes:
+      - aw_data:/data
+    restart: unless-stopped
+
+volumes:
+  aw_data:
