@@ -1,0 +1,144 @@
+================================================================================
+  AUTO WORKLOG AGENT - START HERE
+================================================================================
+
+✅ This binary works on ALL Linux distributions!
+   (Ubuntu, Debian, Fedora, RHEL, CentOS, Arch, openSUSE, Alpine, etc.)
+
+✅ Statically linked - No dependencies needed!
+   (No Python, no libraries, just one 12MB binary file)
+
+================================================================================
+  QUICK START (3 steps)
+================================================================================
+
+1. Make scripts executable:
+   chmod +x quick-setup.sh awagent install.sh
+
+2. Run the setup script:
+   ./quick-setup.sh
+
+3. Start the agent:
+   ./awagent --verbose
+
+That's it! View your activity at http://localhost:5600
+
+================================================================================
+  WHAT YOU NEED
+================================================================================
+
+REQUIRED:
+- Linux x86_64 (any distribution)
+- ActivityWatch server running at http://localhost:5600
+- One of these tools (usually pre-installed):
+  * xdotool (recommended)
+  * xprop (most common)
+  * wmctrl
+  * gdbus (GNOME)
+  * qdbus (KDE)
+
+OPTIONAL:
+- Systemd (for running as a service)
+
+================================================================================
+  INSTALL WINDOW DETECTION TOOL (if needed)
+================================================================================
+
+Check what's already installed:
+  which xdotool xprop wmctrl
+
+If nothing found, install xdotool:
+  Ubuntu/Debian:  sudo apt-get install xdotool
+  Fedora/RHEL:    sudo dnf install xdotool
+  Arch Linux:     sudo pacman -S xdotool
+
+Or install xprop (lighter):
+  Ubuntu/Debian:  sudo apt-get install x11-utils
+  Fedora/RHEL:    sudo dnf install xorg-x11-utils
+
+================================================================================
+  START ACTIVITYWATCH SERVER
+================================================================================
+
+Using Docker (recommended):
+  docker run -d --name activitywatch \
+    -p 5600:5600 \
+    -v ~/.local/share/activitywatch:/data \
+    activitywatch/activitywatch:latest
+
+Verify it's running:
+  curl http://localhost:5600/api/0/info
+
+================================================================================
+  FILES INCLUDED
+================================================================================
+
+awagent              - The main binary (works on all Linux!)
+quick-setup.sh       - Automated setup script
+install.sh           - Install as systemd service
+config.sample.json   - Sample configuration
+README-DEPLOY.md     - Quick start guide
+DEPLOYMENT.md        - Detailed deployment instructions
+README.md            - Full documentation
+TESTING.md           - Testing guide
+START-HERE.txt       - This file
+
+================================================================================
+  DOCUMENTATION
+================================================================================
+
+Read these files in order:
+1. START-HERE.txt (this file) - Quick overview
+2. README-DEPLOY.md - Quick start guide
+3. DEPLOYMENT.md - Detailed deployment instructions
+4. README.md - Complete documentation
+
+================================================================================
+  VERIFY THE BINARY
+================================================================================
+
+Check it's a static binary:
+  file awagent
+  # Should show: "statically linked"
+
+Check no external dependencies:
+  ldd awagent
+  # Should show: "not a dynamic executable"
+
+Test it:
+  ./awagent --help
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+"No window detection method available"
+  → Install xdotool or xprop (see above)
+
+"Connection refused to ActivityWatch"
+  → Start ActivityWatch server (see above)
+
+"Permission denied"
+  → chmod +x awagent
+
+"No repositories found"
+  → Edit ~/.config/awagent/config.json
+  → Make sure "roots" points to your home directory
+
+================================================================================
+  SUPPORT
+================================================================================
+
+View logs:
+  journalctl --user -u awagent -f
+
+Run with verbose output:
+  ./awagent --verbose
+
+Check all documentation files in this folder!
+
+================================================================================
+
+Ready to start? Run: ./quick-setup.sh
+
+================================================================================

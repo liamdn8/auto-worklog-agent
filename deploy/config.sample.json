@@ -1,0 +1,21 @@
+{
+  "activityWatch": {
+    "baseURL": "http://localhost:5600",
+    "bucketPrefix": "awagent",
+    "machine": "TEST-PC"
+  },
+  "git": {
+    "repositories": [],
+    "roots": [
+      "${HOME}"
+    ],
+    "maxDepth": 0,
+    "rescanIntervalMin": 5
+  },
+  "session": {
+    "idleTimeoutMinutes": 30,
+    "pollInterval": "5s",
+    "flushInterval": "15s",
+    "pulseTime": "10s"
+  }
+}
