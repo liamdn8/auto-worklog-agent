@@ -97,7 +97,9 @@ func (t *Tracker) RunTest(ctx context.Context) error {
 		case evt := <-events:
 			t.recordEvent(evt)
 		case <-flushTicker.C:
+			// Flush both expired sessions and send heartbeats for active ones
 			t.flushExpired(ctx)
+			t.flushActive(ctx)
 		}
 	}
 }
@@ -145,7 +147,9 @@ func (t *Tracker) Run(ctx context.Context) error {
 		case evt := <-events:
 			t.recordEvent(evt)
 		case <-flushTicker.C:
+			// Flush both expired sessions and send heartbeats for active ones
 			t.flushExpired(ctx)
+			t.flushActive(ctx)
 		}
 	}
 }
@@ -414,6 +418,27 @@ func (t *Tracker) flushExpired(ctx context.Context) {
 		t.mu.Lock()
 		delete(t.sessions, keys[i])
 		t.mu.Unlock()
+	}
+}
+
+// flushActive publishes heartbeat updates for all active sessions without ending them
+func (t *Tracker) flushActive(ctx context.Context) {
+	t.mu.Lock()
+	sessionsCopy := make([]*session.State, 0, len(t.sessions))
+	for _, sess := range t.sessions {
+		// Only flush sessions that have some activity
+		if sess.Duration() > 0 {
+			sessionsCopy = append(sessionsCopy, sess)
+		}
+	}
+	t.mu.Unlock()
+
+	for _, sess := range sessionsCopy {
+		log.Printf("Publishing heartbeat repo=%s duration=%s events=%d commits=%d",
+			sess.Repo.Name, sess.Duration(), sess.Events, len(sess.Commits))
+		if err := t.publishSession(ctx, sess); err != nil {
+			log.Printf("publish heartbeat %s: %v", sess.Repo.Path, err)
+		}
 	}
 }
 
