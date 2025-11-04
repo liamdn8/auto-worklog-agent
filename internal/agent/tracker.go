@@ -58,7 +58,7 @@ func NewTracker(cfg config.Config, awClient *activitywatch.Client) (*Tracker, er
 	}
 
 	if tracker.idleTimeout == 0 {
-		tracker.idleTimeout = 30 * time.Minute
+		tracker.idleTimeout = 5 * time.Minute
 	}
 
 	tracker.refreshRepositories()
@@ -373,6 +373,26 @@ func (t *Tracker) recordEvent(evt repoEvent) {
 			sess.StartCommit = startHash
 		}
 
+		t.sessions[repoKey] = sess
+		log.Printf("Session started repo=%s branch=%s commit=%s source=%s", sess.Repo.Name, sess.Branch, sess.StartCommit[:8], evt.path)
+		return
+	}
+
+	// Check if branch has changed - if so, flush old session and start new one
+	if branch != "" && branch != sess.Branch {
+		log.Printf("Branch changed from %s to %s, flushing session repo=%s duration=%s events=%d",
+			sess.Branch, branch, sess.Repo.Name, sess.Duration(), sess.Events)
+
+		// Publish the old session
+		if err := t.publishSession(context.Background(), sess); err != nil {
+			log.Printf("publish session on branch change %s: %v", sess.Repo.Path, err)
+		}
+
+		// Start fresh session for new branch
+		sess = session.NewState(evt.repo, branch, evt.when)
+		if startHash, err := gitinfo.GetCurrentCommitHash(evt.repo.Path); err == nil {
+			sess.StartCommit = startHash
+		}
 		t.sessions[repoKey] = sess
 		log.Printf("Session started repo=%s branch=%s commit=%s source=%s", sess.Repo.Name, sess.Branch, sess.StartCommit[:8], evt.path)
 		return

@@ -127,7 +127,7 @@ func defaultConfig() Config {
 			RescanIntervalMin: 5,
 		},
 		Session: SessionConfig{
-			IdleTimeoutMinutes: 30,
+			IdleTimeoutMinutes: 5,
 			PollInterval:       newJSONDuration(5 * time.Second),
 			FlushInterval:      newJSONDuration(15 * time.Second),
 			PulseTime:          newJSONDuration(10 * time.Second),
