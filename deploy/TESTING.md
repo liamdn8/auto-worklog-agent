@@ -20,16 +20,16 @@ Test mode will:
 - Auto-discover Git repositories in your home directory
 - Simulate IDE activity for each repository every 10 seconds
 - Create work sessions and flush them to ActivityWatch
-- **Use new bucket naming**: `user.repo.branch` (e.g., `lamdn8.auto-worklog-agent.main`)
+- **Use new bucket naming**: `user_repo_branch` (e.g., `lamdn8_auto-worklog-agent_main`)
 - Log all activity to console
 
 Check the results:
 ```bash
-# View buckets created (notice user.repo.branch format)
+# View buckets created (notice user_repo_branch format)
 curl http://localhost:5600/api/0/buckets/ | jq
 
 # View events for a specific repo
-curl 'http://localhost:5600/api/0/buckets/lamdn8.auto-worklog-agent.main/events?limit=10' | jq
+curl 'http://localhost:5600/api/0/buckets/lamdn8_auto-worklog-agent_main/events?limit=10' | jq
 
 # Open ActivityWatch web UI
 open http://localhost:5600
@@ -54,7 +54,7 @@ For production use with automatic IDE detection:
    - Poll active window every 1 second
    - Match window titles to discovered Git repositories  
    - Track sessions per repository and branch
-   - Create buckets as `user.repo.branch` (e.g., `lamdn8.myproject.feature-branch`)
+   - Create buckets as `user_repo_branch` (e.g., `lamdn8_myproject_feature-branch`)
    - Flush sessions after 30 minutes of inactivity
 
 ## Bucket Naming Format
@@ -62,8 +62,8 @@ For production use with automatic IDE detection:
 Buckets are now named as: **`user.repository.branch`**
 
 Examples:
-- `lamdn8.auto-worklog-agent.main`
-- `lamdn8.mc-tool.web-tool`
+- `lamdn8_auto-worklog-agent_main`
+- `lamdn8_mc-tool_web-tool`
 - `johndoe.myproject.feature-login`
 
 This makes it easy for Jenkins to query sessions by user, project, or branch!
@@ -110,7 +110,7 @@ Look for: `Repository scan complete: indexed N repositories`
 
 ## Understanding Bucket Names
 
-The new bucket naming format `user.repo.branch` makes it easy to:
+The new bucket naming format `user_repo_branch` makes it easy to:
 - Query all work by a specific user: `curl http://localhost:5600/api/0/buckets/ | jq 'to_entries | map(select(.key | startswith("lamdn8")))'`
 - Track work on specific branches: Filter buckets ending with `.main` or `.feature-*`
 - Aggregate work per project: Filter buckets containing specific repo names

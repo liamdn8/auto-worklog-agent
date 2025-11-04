@@ -13,6 +13,8 @@ type State struct {
 	Start        time.Time
 	LastActivity time.Time
 	Events       int
+	StartCommit  string           // Commit hash at session start
+	Commits      []gitinfo.Commit // All commits made during this session
 }
 
 // NewState constructs a fresh session state.
@@ -23,6 +25,8 @@ func NewState(repo gitinfo.Info, branch string, ts time.Time) *State {
 		Start:        ts,
 		LastActivity: ts,
 		Events:       1,
+		StartCommit:  "",
+		Commits:      []gitinfo.Commit{},
 	}
 }
 

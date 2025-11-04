@@ -1,6 +1,6 @@
 {
   "activityWatch": {
-    "baseURL": "http://localhost:5600",
+    "baseURL": "http://localhost:9600",
     "bucketPrefix": "awagent",
     "machine": "TEST-PC"
   },

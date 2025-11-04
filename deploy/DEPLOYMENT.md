@@ -139,7 +139,7 @@ journalctl --user -u awagent -f
 
 ### Bucket Naming
 - Format: `{user}.{repository}.{branch}`
-- Example: `lamdn8.auto-worklog-agent.main`
+- Example: `lamdn8_auto-worklog-agent_main`
 - Automatically creates buckets per repo/branch combination
 
 ### Session Management

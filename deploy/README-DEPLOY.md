@@ -34,7 +34,7 @@ chmod +x quick-setup.sh awagent install.sh
 - ✅ **One binary file** - Works everywhere (12MB, statically linked)
 - ✅ **Auto-discovery** - Finds all Git repos automatically  
 - ✅ **Smart window tracking** - Tries 5 different methods
-- ✅ **Per-repo buckets** - Format: `user.repo.branch`
+- ✅ **Per-repo buckets** - Format: `user_repo_branch`
 - ✅ **Zero config** - Works out of the box
 
 ## Requirements
@@ -176,7 +176,7 @@ The agent automatically tries these methods in order:
 
 ### Smart Buckets
 - One bucket per repo + branch combination
-- Example: `lamdn8.myproject.feature-branch`
+- Example: `lamdn8_myproject_feature-branch`
 - Easy to track work across branches
 
 ### Session Management

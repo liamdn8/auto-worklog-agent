@@ -361,14 +361,36 @@ func (t *Tracker) recordEvent(evt repoEvent) {
 	repoKey := evt.repo.Path
 	sess, ok := t.sessions[repoKey]
 	if !ok {
+		// Start new session
 		sess = session.NewState(evt.repo, branch, evt.when)
+
+		// Capture starting commit hash
+		if startHash, err := gitinfo.GetCurrentCommitHash(evt.repo.Path); err == nil {
+			sess.StartCommit = startHash
+		}
+
 		t.sessions[repoKey] = sess
-		log.Printf("Session started repo=%s branch=%s source=%s", sess.Repo.Name, sess.Branch, evt.path)
+		log.Printf("Session started repo=%s branch=%s commit=%s source=%s", sess.Repo.Name, sess.Branch, sess.StartCommit[:8], evt.path)
 		return
 	}
 
 	sess.Touch(branch, evt.when)
-	log.Printf("Activity detected repo=%s branch=%s source=%s totalEvents=%d", sess.Repo.Name, sess.Branch, evt.path, sess.Events)
+
+	// Update commits - get all commits since session start
+	if sess.StartCommit != "" {
+		commits, err := gitinfo.GetCommitsSince(evt.repo.Path, sess.StartCommit)
+		if err == nil && len(commits) > 0 {
+			sess.Commits = commits
+			log.Printf("Activity detected repo=%s branch=%s commits=%d totalEvents=%d source=%s",
+				sess.Repo.Name, sess.Branch, len(sess.Commits), sess.Events, evt.path)
+		} else {
+			log.Printf("Activity detected repo=%s branch=%s source=%s totalEvents=%d",
+				sess.Repo.Name, sess.Branch, evt.path, sess.Events)
+		}
+	} else {
+		log.Printf("Activity detected repo=%s branch=%s source=%s totalEvents=%d",
+			sess.Repo.Name, sess.Branch, evt.path, sess.Events)
+	}
 }
 
 func (t *Tracker) flushExpired(ctx context.Context) {
@@ -417,7 +439,7 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 		return nil
 	}
 
-	// Bucket name format: user.repoName.branch
+	// Bucket name format: user_repoName_branch
 	bucketID := bucketIDForSession(sess.Repo.User, sess.Repo.Name, sess.Branch)
 
 	data := map[string]any{
@@ -428,6 +450,12 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 		"branch":     sess.Branch,
 		"remote":     sess.Repo.Remote,
 		"eventCount": sess.Events,
+	}
+
+	// Add commits if any were made during this session
+	if len(sess.Commits) > 0 {
+		data["commits"] = sess.Commits
+		log.Printf("Publishing session with %d commits", len(sess.Commits))
 	}
 
 	event := activitywatch.Event{
@@ -441,7 +469,8 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 		return fmt.Errorf("record event: %w", err)
 	}
 
-	log.Printf("Session published repo=%s branch=%s duration=%s events=%d bucket=%s", sess.Repo.Name, sess.Branch, sess.Duration(), sess.Events, bucketID)
+	log.Printf("Session published repo=%s branch=%s duration=%s events=%d commits=%d bucket=%s",
+		sess.Repo.Name, sess.Branch, sess.Duration(), sess.Events, len(sess.Commits), bucketID)
 
 	return nil
 }
@@ -449,7 +478,8 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 var bucketSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
 
 func bucketIDForSession(user, repoName, branch string) string {
-	// Format: user.repoName.branch
+	// Format: user_repo_branch (using underscores to avoid URL parsing issues)
+	// ActivityWatch treats dots as URL path separators, which can cause issues
 	user = bucketSanitizer.ReplaceAllString(strings.ToLower(user), "-")
 	user = strings.Trim(user, "-")
 	if user == "" {
@@ -468,7 +498,7 @@ func bucketIDForSession(user, repoName, branch string) string {
 		branch = "unknown"
 	}
 
-	return fmt.Sprintf("%s.%s.%s", user, repoName, branch)
+	return fmt.Sprintf("%s_%s_%s", user, repoName, branch)
 }
 
 type repoEvent struct {

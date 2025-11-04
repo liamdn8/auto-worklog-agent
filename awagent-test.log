@@ -1,0 +1,62 @@
+2025/11/04 15:55:21 Repository scan complete: indexed 4 repositories
+2025/11/04 15:55:21 Tracker configured: repositories=4 idleTimeout=30m0s flushInterval=15s
+2025/11/04 15:55:21 Starting ActivityWatch agent (verbose=true, test=true)...
+2025/11/04 15:55:21 Configuration: server=http://localhost:9600 machine=DESKTOP-TVPK4S4
+2025/11/04 15:55:21 Git scan roots: [/home/liamdn] (maxDepth=5, rescan=5m)
+2025/11/04 15:55:21 TEST MODE: Simulating IDE activity without aw-watcher-window
+2025/11/04 15:55:21 TEST MODE: Simulating activity for discovered repositories
+2025/11/04 15:55:31 TEST: Simulating activity for repo=auto-worklog-agent
+2025/11/04 15:55:31 TEST: Simulating activity for repo=DRA
+2025/11/04 15:55:31 TEST: Simulating activity for repo=M-DRA
+2025/11/04 15:55:31 TEST: Simulating activity for repo=mc-tool
+2025/11/04 15:55:31 Session started repo=auto-worklog-agent branch=test/PROJ-789-live-commit-test commit=6c6ef034 source=[test-activity]
+2025/11/04 15:55:31 Session started repo=DRA branch=main commit=2dd5c46b source=[test-activity]
+2025/11/04 15:55:31 Session started repo=M-DRA branch=main commit=abf9538a source=[test-activity]
+2025/11/04 15:55:31 Session started repo=mc-tool branch=web-tool commit=ee9f5200 source=[test-activity]
+2025/11/04 15:55:41 TEST: Simulating activity for repo=auto-worklog-agent
+2025/11/04 15:55:41 TEST: Simulating activity for repo=DRA
+2025/11/04 15:55:41 TEST: Simulating activity for repo=M-DRA
+2025/11/04 15:55:41 TEST: Simulating activity for repo=mc-tool
+2025/11/04 15:55:41 Activity detected repo=auto-worklog-agent branch=test/PROJ-789-live-commit-test commits=3 totalEvents=2 source=[test-activity]
+2025/11/04 15:55:41 Activity detected repo=DRA branch=main source=[test-activity] totalEvents=2
+2025/11/04 15:55:41 Activity detected repo=M-DRA branch=main source=[test-activity] totalEvents=2
+2025/11/04 15:55:41 Activity detected repo=mc-tool branch=web-tool source=[test-activity] totalEvents=2
+2025/11/04 15:55:51 TEST: Simulating activity for repo=auto-worklog-agent
+2025/11/04 15:55:51 TEST: Simulating activity for repo=DRA
+2025/11/04 15:55:51 TEST: Simulating activity for repo=M-DRA
+2025/11/04 15:55:51 TEST: Simulating activity for repo=mc-tool
+2025/11/04 15:55:51 Activity detected repo=auto-worklog-agent branch=test/PROJ-789-live-commit-test commits=3 totalEvents=3 source=[test-activity]
+2025/11/04 15:55:51 Activity detected repo=DRA branch=main source=[test-activity] totalEvents=3
+2025/11/04 15:55:51 Activity detected repo=M-DRA branch=main source=[test-activity] totalEvents=3
+2025/11/04 15:55:51 Activity detected repo=mc-tool branch=web-tool source=[test-activity] totalEvents=3
+2025/11/04 15:55:59 Flushing remaining session repo=auto-worklog-agent duration=19.999357811s events=3
+2025/11/04 15:55:59 Publishing session with 3 commits
+2025/11/04 15:55:59 ActivityWatch: ensured bucket lamdn8_auto-worklog-agent_test-proj-789-live-commit-test (type=app.awagent.worksession)
+2025/11/04 15:55:59 ActivityWatch: POST http://localhost:9600/api/0/buckets/lamdn8_auto-worklog-agent_test-proj-789-live-commit-test/events payload={"data":{"branch":"test/PROJ-789-live-commit-test","commits":[{"hash":"76557c9eafc4b8097df76eb537ecca255c99117e","message":"PROJ-789: Add first live test commit","author":"lamdn8 \u003clamdn8@gmail.com\u003e","timestamp":"2025-11-04T15:55:34+07:00"},{"hash":"4a26305cd3b7e92a48fe9e0f44841985abf57d3c","message":"PROJ-789: Add second live test commit","author":"lamdn8 \u003clamdn8@gmail.com\u003e","timestamp":"2025-11-04T15:55:38+07:00"},{"hash":"b584ae38b040ab9c3e53cc81eff513a51f1f1db5","message":"PROJ-999: Different issue commit","author":"lamdn8 \u003clamdn8@gmail.com\u003e","timestamp":"2025-11-04T15:55:41+07:00"}],"eventCount":3,"gitEmail":"lamdn8@gmail.com","gitUser":"lamdn8","remote":"git@github.com:liamdn8/auto-worklog-agent.git","repoName":"auto-worklog-agent","repoPath":"/home/liamdn/auto-worklog-agent"},"duration":19.999357811,"timestamp":"2025-11-04T08:55:31.135375057Z"}
+2025/11/04 15:55:59 ActivityWatch: recorded event bucket=lamdn8_auto-worklog-agent_test-proj-789-live-commit-test duration=19.999357811s events=3 branch=test/PROJ-789-live-commit-test
+2025/11/04 15:55:59 Session published repo=auto-worklog-agent branch=test/PROJ-789-live-commit-test duration=19.999357811s events=3 commits=3 bucket=lamdn8_auto-worklog-agent_test-proj-789-live-commit-test
+2025/11/04 15:55:59 Flushing remaining session repo=DRA duration=19.999292122s events=3
+2025/11/04 15:55:59 ActivityWatch: POST http://localhost:9600/api/0/buckets/liamdn_dra_main/events payload={"data":{"branch":"main","eventCount":3,"gitEmail":"lamdn98@gmail.com","gitUser":"liamdn","remote":"https://github.com/liamdn10/M-DRA.git","repoName":"DRA","repoPath":"/home/liamdn/DRA"},"duration":19.999292122,"timestamp":"2025-11-04T08:55:31.135498634Z"}
+2025/11/04 15:55:59 ActivityWatch: recorded event bucket=liamdn_dra_main duration=19.999292122s events=3 branch=main
+2025/11/04 15:55:59 Session published repo=DRA branch=main duration=19.999292122s events=3 commits=0 bucket=liamdn_dra_main
+2025/11/04 15:55:59 Flushing remaining session repo=M-DRA duration=19.999299592s events=3
+2025/11/04 15:55:59 ActivityWatch: POST http://localhost:9600/api/0/buckets/liamdn8_m-dra_main/events payload={"data":{"branch":"main","eventCount":3,"gitEmail":"lamdn98@gmail.com","gitUser":"liamdn8","remote":"git@github.com:liamdn8/M-DRA.git","repoName":"M-DRA","repoPath":"/home/liamdn/M-DRA"},"duration":19.999299592,"timestamp":"2025-11-04T08:55:31.135510202Z"}
+2025/11/04 15:55:59 ActivityWatch: recorded event bucket=liamdn8_m-dra_main duration=19.999299592s events=3 branch=main
+2025/11/04 15:55:59 Session published repo=M-DRA branch=main duration=19.999299592s events=3 commits=0 bucket=liamdn8_m-dra_main
+2025/11/04 15:55:59 Flushing remaining session repo=mc-tool duration=19.999306986s events=3
+2025/11/04 15:55:59 ActivityWatch: POST http://localhost:9600/api/0/buckets/lamdn8_mc-tool_web-tool/events payload={"data":{"branch":"web-tool","eventCount":3,"gitEmail":"lamdn8@gmail.com","gitUser":"lamdn8","remote":"git@github.com:liamdn8/mc-tool.git","repoName":"mc-tool","repoPath":"/home/liamdn/mc-tool"},"duration":19.999306986,"timestamp":"2025-11-04T08:55:31.135515442Z"}
+2025/11/04 15:55:59 ActivityWatch: recorded event bucket=lamdn8_mc-tool_web-tool duration=19.999306986s events=3 branch=web-tool
+2025/11/04 15:55:59 Session published repo=mc-tool branch=web-tool duration=19.999306986s events=3 commits=0 bucket=lamdn8_mc-tool_web-tool
+Error: context canceled
+Usage:
+  awagent [flags]
+
+Flags:
+      --aw-url string    override ActivityWatch server URL
+      --config string    path to config file
+  -h, --help             help for awagent
+      --machine string   override machine identifier reported to ActivityWatch
+      --test             run in test mode (simulate activity without aw-watcher-window)
+  -v, --verbose          enable verbose logging
+
+2025/11/04 15:55:59 command failed: context canceled

@@ -1,24 +1,112 @@
-# User story
+# User Story
 
-I need to create a agent that running on linux ussing golang to support auto development traking. The application should watch the development activity on the IDE include intellij IDE and VS Code
+I need to create an agent running on Linux using Golang to support automatic development tracking. The application should watch development activity in IDEs including IntelliJ IDEA and VS Code.
 
-# Assumption
+# Assumptions
 
-I deployed a ActivityWatch server listening for work event and need to deploy the tracking application by sending API to ActivitiWatch server
+- I deployed an ActivityWatch server listening for work events
+- The tracking application sends data via API to ActivityWatch server
+- The agent runs continuously on a workstation
+- The agent auto-discovers development workspaces without per-project setup
 
-The agent runs continuously on a workstation and should auto-discover development workspaces without per-project setup.
+# Requirements
 
-# Requirement
+## 1. Work Session Tracking
+A work session is identified by:
+- Local Git user
+- Git repository/project
+- Git branch
+- **Commit history** (all commits made during the session)
 
-1. A work session identified by local git user, project, and branch
-2. Jenkins will read from the aw-server to calculate the worklog and automatically put to Jira. So the work session data should support to process easily. The worklog should be automatically by push action or auto detect after idle for 30 mins
-3. The tool should easy to install on linux, plug-and-play style app
-4. The agent must auto discover the git repository coding. learn how activitywatch work by reading these source code:
-    - https://github.com/ActivityWatch/aw-watcher-window/tree/c80aa5adbbe5959fcb661148aeb9f3898e6b68f3
-    - https://github.com/ActivityWatch/aw-watcher-input/tree/9bb5045456524b215ae11f422b80ec728c93bac7
-    - https://github.com/ActivityWatch/aw-watcher-afk/tree/403a331f6f626afe18094cf61aeed235b75e537c
+## 2. Worklog Automation Support
+The work session data must support easy processing for worklog automation:
+- **Session ends**: After idle for 30 minutes OR when explicitly flushed
+- **Data format**: Rich JSON structure with all metadata
+- **Commit tracking**: All commits captured with hash, message, author, timestamp
+- **Issue detection**: Issue keys can be extracted from branch names and commit messages
+- **Processing ready**: External tools (Jenkins, Python scripts, etc.) can query ActivityWatch API to:
+  - Extract issue keys from commits
+  - Calculate time spent per issue
+  - Automatically post worklogs to Jira
+
+## 3. Easy Installation
+- Plug-and-play style application for Linux
+- Single static binary (no dependencies)
+- Works across all Linux distributions (Ubuntu, CentOS, Fedora, etc.)
+- No Python, Node.js, or other runtime required
+
+## 4. Auto-Discovery
+- Automatically discover Git repositories in configured directories
+- No per-project setup needed
+- Continuously monitor for new repositories
+- Reference implementations studied:
+  - https://github.com/ActivityWatch/aw-watcher-window
+  - https://github.com/ActivityWatch/aw-watcher-input
+  - https://github.com/ActivityWatch/aw-watcher-afk
 
 # Configuration
-1. The agent should support configuration file to configure the aw-server endpoint or support argument to override the endpoint
-2. The interval to rescan the git repositories is developing is fixed to 5 mins
-3. No limit the depth to scan the git repositories (set `maxDepth` to 0 for unlimited; default depth is 5)
+
+## 1. Server Endpoint
+- Support configuration file (`config.json`)
+- Support command-line arguments to override configuration
+- Default: `http://localhost:5600`
+
+## 2. Repository Scanning
+- Rescan interval: 5 minutes (fixed)
+- Scan depth: Configurable (default: 5 levels, 0 = unlimited)
+- Root directories: Configurable list (e.g., `~/projects`, `~/repos`)
+
+## 3. Session Management
+- Idle timeout: 30 minutes
+- Flush interval: 15 seconds
+- Window poll interval: 1 second
+
+# Implementation Status ✅
+
+## Completed Features
+- ✅ **Static binary build** - Single 8MB binary, no dependencies
+- ✅ **Window detection** - Embedded window watcher (no aw-watcher-window needed)
+- ✅ **Git auto-discovery** - Scans configured directories for repositories
+- ✅ **Session tracking** - Tracks user, repo, branch, duration, events
+- ✅ **Commit tracking** - Captures all commits made during sessions
+- ✅ **ActivityWatch integration** - Creates buckets, publishes events
+- ✅ **Cross-platform** - Works on all Linux distributions
+- ✅ **Configuration** - File + CLI arguments support
+- ✅ **Test mode** - Validation without window detection
+
+## Data Structure
+Each event includes:
+```json
+{
+  "timestamp": "2025-11-04T10:00:00Z",
+  "duration": 900.5,
+  "data": {
+    "gitUser": "username",
+    "gitEmail": "user@example.com",
+    "repoName": "project-name",
+    "repoPath": "/path/to/repo",
+    "branch": "feature/PROJ-123-new-feature",
+    "remote": "git@github.com:user/repo.git",
+    "eventCount": 42,
+    "commits": [
+      {
+        "hash": "a1b2c3d4...",
+        "message": "PROJ-123: Add new feature",
+        "author": "username <user@example.com>",
+        "timestamp": "2025-11-04T10:15:00Z"
+      }
+    ]
+  }
+}
+```
+
+## Future Integration
+A separate tool (Jenkins pipeline, Python script, etc.) will:
+1. Query ActivityWatch API for events
+2. Extract issue keys from branch names and commit messages (regex: `[A-Z][A-Z0-9]+-\d+`)
+3. Group sessions by issue key
+4. Calculate total time per issue
+5. Round to Jira-compatible intervals (15 minutes)
+6. Post worklogs to Jira via REST API
+
+This design maintains clean separation: **awagent = tracking**, **future-tool = Jira sync**.

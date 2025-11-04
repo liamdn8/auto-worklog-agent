@@ -10,9 +10,9 @@ if ! command -v "${GO_CMD}" >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p "${ROOT_DIR}/bin"
+mkdir -p "${ROOT_DIR}/deploy"
 
 echo "==> building awagent"
-"${GO_CMD}" build -o "${ROOT_DIR}/bin/awagent" ./cmd/awagent
+"${GO_CMD}" build -o "${ROOT_DIR}/deploy/awagent" ./cmd/awagent
 
-echo "Build complete: ${ROOT_DIR}/bin/awagent"
+echo "Build complete: ${ROOT_DIR}/deploy/awagent"

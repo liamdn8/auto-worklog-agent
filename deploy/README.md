@@ -6,7 +6,7 @@ Go-based agent that automatically tracks development activity across Git reposit
 - **Embedded window watching**: Built-in window activity detection (no aw-watcher-window dependency)
 - **Auto-discovery**: Automatically scans configured directory trees to find Git repositories (no per-project setup required)
 - **IDE integration**: Detects activity in VS Code, IntelliJ IDEA, PyCharm, GoLand, and other IDEs
-- **Smart bucket naming**: Buckets named as `user.repo.branch` for easy querying (e.g., `lamdn8.auto-worklog-agent.main`)
+- **Smart bucket naming**: Buckets named as `user_repo_branch` for easy querying (e.g., `lamdn8_auto-worklog-agent_main`)
 - **Smart session management**: Automatically closes sessions after 30 minutes of inactivity (configurable)
 - **Flexible configuration**: Supports JSON config files with environment variable expansion, plus CLI argument overrides
 - **Depth-controlled scanning**: Configure how deep to scan for repositories (default: 5 levels, use 0 for unlimited)

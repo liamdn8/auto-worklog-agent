@@ -5,11 +5,14 @@ services:
       dockerfile: Dockerfile
     container_name: aw-server
     ports:
-      - "5600:5600"
+      - "9600:5600"  # Changed from 5600:5600 to expose on port 9600
     volumes:
       - aw_data:/data
     environment:
       - AW_DATA_DIR=/data
+      - AW_CORS_ORIGINS=*  # Allow all origins (or specify: http://172.20.3.161:9600,http://localhost:9600)
+      - AW_HOST=0.0.0.0    # Listen on all interfaces
+      - AW_PORT=5600       # Internal port (mapped to 9600 externally)
     restart: unless-stopped
 
 volumes:

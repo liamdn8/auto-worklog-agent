@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Info captures core git metadata for a repository.
@@ -99,4 +100,68 @@ func gitString(path string, args ...string) (string, error) {
 		return "", fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
 	return strings.TrimSpace(stdout.String()), nil
+}
+
+// Commit represents a single git commit with metadata.
+type Commit struct {
+	Hash      string    `json:"hash"`
+	Message   string    `json:"message"`
+	Author    string    `json:"author"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// GetCommitsSince retrieves all commits from startHash to HEAD.
+// If startHash is empty, returns only the HEAD commit.
+// Returns commits in chronological order (oldest first).
+func GetCommitsSince(repoPath string, startHash string) ([]Commit, error) {
+	var gitRange string
+	if startHash == "" {
+		gitRange = "HEAD"
+	} else {
+		gitRange = fmt.Sprintf("%s..HEAD", startHash)
+	}
+
+	// Format: hash|author|timestamp|message (one line per commit)
+	// Use --reverse to get chronological order (oldest first)
+	output, err := gitString(repoPath, "log", "--reverse", "--pretty=format:%H|%an <%ae>|%aI|%s", gitRange)
+	if err != nil {
+		return nil, fmt.Errorf("git log: %w", err)
+	}
+
+	if output == "" {
+		return []Commit{}, nil
+	}
+
+	lines := strings.Split(output, "\n")
+	commits := make([]Commit, 0, len(lines))
+
+	for _, line := range lines {
+		parts := strings.SplitN(line, "|", 4)
+		if len(parts) != 4 {
+			continue
+		}
+
+		timestamp, err := time.Parse(time.RFC3339, parts[2])
+		if err != nil {
+			timestamp = time.Now()
+		}
+
+		commits = append(commits, Commit{
+			Hash:      parts[0],
+			Message:   parts[3],
+			Author:    parts[1],
+			Timestamp: timestamp,
+		})
+	}
+
+	return commits, nil
+}
+
+// GetCurrentCommitHash returns the current HEAD commit hash.
+func GetCurrentCommitHash(repoPath string) (string, error) {
+	hash, err := gitString(repoPath, "rev-parse", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("get HEAD hash: %w", err)
+	}
+	return hash, nil
 }

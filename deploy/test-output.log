@@ -1,0 +1,15 @@
+2025/11/04 15:25:52 Repository scan complete: indexed 4 repositories
+2025/11/04 15:25:52 Tracker configured: repositories=4 idleTimeout=30m0s flushInterval=15s
+2025/11/04 15:25:52 Starting ActivityWatch agent (verbose=true, test=true)...
+2025/11/04 15:25:52 Configuration: server=http://localhost:9600 machine=DESKTOP-TVPK4S4
+2025/11/04 15:25:52 Git scan roots: [/home/liamdn] (maxDepth=5, rescan=5m)
+2025/11/04 15:25:52 TEST MODE: Simulating IDE activity without aw-watcher-window
+2025/11/04 15:25:52 TEST MODE: Simulating activity for discovered repositories
+2025/11/04 15:26:02 TEST: Simulating activity for repo=auto-worklog-agent
+2025/11/04 15:26:02 TEST: Simulating activity for repo=DRA
+2025/11/04 15:26:02 TEST: Simulating activity for repo=M-DRA
+2025/11/04 15:26:02 TEST: Simulating activity for repo=mc-tool
+2025/11/04 15:26:03 Session started repo=auto-worklog-agent branch=main source=[test-activity]
+2025/11/04 15:26:03 Session started repo=DRA branch=main source=[test-activity]
+2025/11/04 15:26:03 Session started repo=M-DRA branch=main source=[test-activity]
+2025/11/04 15:26:03 Session started repo=mc-tool branch=web-tool source=[test-activity]
