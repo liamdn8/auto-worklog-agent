@@ -83,6 +83,7 @@ Each event includes:
   "data": {
     "gitUser": "username",
     "gitEmail": "user@example.com",
+    "app": "code",
     "repoName": "project-name",
     "repoPath": "/path/to/repo",
     "branch": "feature/PROJ-123-new-feature",
@@ -110,3 +111,11 @@ A separate tool (Jenkins pipeline, Python script, etc.) will:
 6. Post worklogs to Jira via REST API
 
 This design maintains clean separation: **awagent = tracking**, **future-tool = Jira sync**.
+
+## Installer behavior
+
+- `install.sh <name>`: optional first argument to explicitly set the machine name written into `config.json` (`activityWatch.machine`).
+- If no argument is provided, the installer will use `git config --global user.name` when set.
+- If git global name is not set, the installer falls back to the machine's primary non-loopback IP address, and then to the hostname as a final fallback.
+
+The `app` label was added to each event so consumers can differentiate which IDE/application produced the activity (for example: `code`, `idea`, `vim`, etc.).

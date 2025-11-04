@@ -117,7 +117,7 @@ func (t *Tracker) testActivityLoop(ctx context.Context, events chan<- repoEvent)
 			for _, repo := range t.repos {
 				log.Printf("TEST: Simulating activity for repo=%s", repo.Name)
 				select {
-				case events <- repoEvent{repo: repo, when: time.Now(), path: "[test-activity]"}:
+				case events <- repoEvent{repo: repo, when: time.Now(), path: "[test-activity]", app: "test"}:
 				case <-ctx.Done():
 					t.repoMu.RUnlock()
 					return
@@ -191,7 +191,7 @@ func (t *Tracker) embeddedWindowLoop(ctx context.Context, events chan<- repoEven
 			}
 
 			select {
-			case events <- repoEvent{repo: repo, when: time.Now(), path: fmt.Sprintf("[window] %s - %s", window.App, window.Title)}:
+			case events <- repoEvent{repo: repo, when: time.Now(), path: fmt.Sprintf("[window] %s - %s", window.App, window.Title), app: window.App}:
 			case <-ctx.Done():
 				return
 			}
@@ -366,7 +366,7 @@ func (t *Tracker) recordEvent(evt repoEvent) {
 	sess, ok := t.sessions[repoKey]
 	if !ok {
 		// Start new session
-		sess = session.NewState(evt.repo, branch, evt.when)
+		sess = session.NewState(evt.repo, branch, evt.when, evt.app)
 
 		// Capture starting commit hash
 		if startHash, err := gitinfo.GetCurrentCommitHash(evt.repo.Path); err == nil {
@@ -374,7 +374,11 @@ func (t *Tracker) recordEvent(evt repoEvent) {
 		}
 
 		t.sessions[repoKey] = sess
-		log.Printf("Session started repo=%s branch=%s commit=%s source=%s", sess.Repo.Name, sess.Branch, sess.StartCommit[:8], evt.path)
+		startCommitShort := ""
+		if len(sess.StartCommit) >= 8 {
+			startCommitShort = sess.StartCommit[:8]
+		}
+		log.Printf("Session started repo=%s branch=%s commit=%s source=%s app=%s", sess.Repo.Name, sess.Branch, startCommitShort, evt.path, sess.App)
 		return
 	}
 
@@ -389,16 +393,20 @@ func (t *Tracker) recordEvent(evt repoEvent) {
 		}
 
 		// Start fresh session for new branch
-		sess = session.NewState(evt.repo, branch, evt.when)
+		sess = session.NewState(evt.repo, branch, evt.when, evt.app)
 		if startHash, err := gitinfo.GetCurrentCommitHash(evt.repo.Path); err == nil {
 			sess.StartCommit = startHash
 		}
 		t.sessions[repoKey] = sess
-		log.Printf("Session started repo=%s branch=%s commit=%s source=%s", sess.Repo.Name, sess.Branch, sess.StartCommit[:8], evt.path)
+		startCommitShort := ""
+		if len(sess.StartCommit) >= 8 {
+			startCommitShort = sess.StartCommit[:8]
+		}
+		log.Printf("Session started repo=%s branch=%s commit=%s source=%s app=%s", sess.Repo.Name, sess.Branch, startCommitShort, evt.path, sess.App)
 		return
 	}
 
-	sess.Touch(branch, evt.when)
+	sess.Touch(branch, evt.app, evt.when)
 
 	// Update commits - get all commits since session start
 	if sess.StartCommit != "" {
@@ -497,6 +505,11 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 		"eventCount": sess.Events,
 	}
 
+	// Include application/IDE name when available
+	if sess.App != "" {
+		data["app"] = sess.App
+	}
+
 	// Add commits if any were made during this session
 	if len(sess.Commits) > 0 {
 		data["commits"] = sess.Commits
@@ -550,4 +563,5 @@ type repoEvent struct {
 	repo gitinfo.Info
 	when time.Time
 	path string
+	app  string
 }

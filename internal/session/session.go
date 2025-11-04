@@ -15,10 +15,11 @@ type State struct {
 	Events       int
 	StartCommit  string           // Commit hash at session start
 	Commits      []gitinfo.Commit // All commits made during this session
+	App          string           // Application name (IDE) where activity was detected
 }
 
 // NewState constructs a fresh session state.
-func NewState(repo gitinfo.Info, branch string, ts time.Time) *State {
+func NewState(repo gitinfo.Info, branch string, ts time.Time, app string) *State {
 	return &State{
 		Repo:         repo,
 		Branch:       branch,
@@ -27,13 +28,17 @@ func NewState(repo gitinfo.Info, branch string, ts time.Time) *State {
 		Events:       1,
 		StartCommit:  "",
 		Commits:      []gitinfo.Commit{},
+		App:          app,
 	}
 }
 
 // Touch updates the session's last activity timestamp.
-func (s *State) Touch(branch string, ts time.Time) {
+func (s *State) Touch(branch string, app string, ts time.Time) {
 	if branch != "" {
 		s.Branch = branch
+	}
+	if app != "" {
+		s.App = app
 	}
 	s.LastActivity = ts
 	s.Events++
