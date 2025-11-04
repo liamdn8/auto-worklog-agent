@@ -5,17 +5,17 @@
     "machine": "TEST-PC"
   },
   "git": {
-    "repositories": [
-      "/path/to/repository"
-    ],
+    "repositories": [],
     "roots": [
       "${HOME}"
     ],
-    "maxDepth": 5
+    "maxDepth": 0,
+    "rescanIntervalMin": 5
   },
   "session": {
     "idleTimeoutMinutes": 30,
     "pollInterval": "5s",
-    "flushInterval": "15s"
+    "flushInterval": "15s",
+    "pulseTime": "10s"
   }
 }

@@ -26,9 +26,10 @@ type ActivityWatchConfig struct {
 
 // GitConfig configures git metadata resolution.
 type GitConfig struct {
-	Repositories []string `json:"repositories"`
-	Roots        []string `json:"roots"`
-	MaxDepth     int      `json:"maxDepth"`
+	Repositories      []string `json:"repositories"`
+	Roots             []string `json:"roots"`
+	MaxDepth          int      `json:"maxDepth"`
+	RescanIntervalMin int      `json:"rescanIntervalMin"`
 }
 
 // SessionConfig controls session detection behavior.
@@ -36,6 +37,7 @@ type SessionConfig struct {
 	IdleTimeoutMinutes int          `json:"idleTimeoutMinutes"`
 	PollInterval       jsonDuration `json:"pollInterval"`
 	FlushInterval      jsonDuration `json:"flushInterval"`
+	PulseTime          jsonDuration `json:"pulseTime"`
 }
 
 type jsonDuration struct {
@@ -119,14 +121,16 @@ func defaultConfig() Config {
 			Machine:      hostnameOrUnknown(),
 		},
 		Git: GitConfig{
-			Repositories: repos,
-			Roots:        roots,
-			MaxDepth:     5,
+			Repositories:      repos,
+			Roots:             roots,
+			MaxDepth:          5,
+			RescanIntervalMin: 5,
 		},
 		Session: SessionConfig{
 			IdleTimeoutMinutes: 30,
 			PollInterval:       newJSONDuration(5 * time.Second),
 			FlushInterval:      newJSONDuration(15 * time.Second),
+			PulseTime:          newJSONDuration(10 * time.Second),
 		},
 	}
 }

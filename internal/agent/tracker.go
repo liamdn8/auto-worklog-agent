@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -16,12 +15,12 @@ import (
 	"github.com/liamdn8/auto-worklog-agent/internal/config"
 	"github.com/liamdn8/auto-worklog-agent/internal/gitinfo"
 	"github.com/liamdn8/auto-worklog-agent/internal/session"
+	"github.com/liamdn8/auto-worklog-agent/internal/watcher"
 )
 
 const (
 	bucketTypeWorkSession = "app.awagent.worksession"
 	windowPollLimit       = 100
-	repoScanInterval      = 5 * time.Minute
 )
 
 // Tracker coordinates window activity tracking and publishes work sessions to ActivityWatch.
@@ -29,10 +28,8 @@ type Tracker struct {
 	cfg      config.Config
 	awClient *activitywatch.Client
 
-	idleTimeout        time.Duration
-	flushEvery         time.Duration
-	windowLast         time.Time
-	windowBucketWarned bool
+	idleTimeout time.Duration
+	flushEvery  time.Duration
 
 	sessions map[string]*session.State
 	mu       sync.Mutex
@@ -80,11 +77,14 @@ func NewTracker(cfg config.Config, awClient *activitywatch.Client) (*Tracker, er
 	return tracker, nil
 }
 
-// Run starts the tracker loop.
-func (t *Tracker) Run(ctx context.Context) error {
-	events := make(chan repoEvent, 64)
-	go t.windowLoop(ctx, events)
+// RunTest runs the tracker in test mode, simulating IDE activity for discovered repositories.
+func (t *Tracker) RunTest(ctx context.Context) error {
+	log.Println("TEST MODE: Simulating activity for discovered repositories")
+
 	go t.repoScanLoop(ctx)
+
+	events := make(chan repoEvent, 64)
+	go t.testActivityLoop(ctx, events)
 
 	flushTicker := time.NewTicker(t.flushEvery)
 	defer flushTicker.Stop()
@@ -102,86 +102,104 @@ func (t *Tracker) Run(ctx context.Context) error {
 	}
 }
 
-func (t *Tracker) windowLoop(ctx context.Context, events chan<- repoEvent) {
+func (t *Tracker) testActivityLoop(ctx context.Context, events chan<- repoEvent) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			t.repoMu.RLock()
+			for _, repo := range t.repos {
+				log.Printf("TEST: Simulating activity for repo=%s", repo.Name)
+				select {
+				case events <- repoEvent{repo: repo, when: time.Now(), path: "[test-activity]"}:
+				case <-ctx.Done():
+					t.repoMu.RUnlock()
+					return
+				}
+			}
+			t.repoMu.RUnlock()
+		}
+	}
+}
+
+// Run starts the tracker loop with embedded window watching.
+func (t *Tracker) Run(ctx context.Context) error {
+	events := make(chan repoEvent, 64)
+	go t.embeddedWindowLoop(ctx, events)
+	go t.repoScanLoop(ctx)
+
+	flushTicker := time.NewTicker(t.flushEvery)
+	defer flushTicker.Stop()
+
+	log.Println("Embedded window watcher started - no aw-watcher-window required!")
+
+	for {
+		select {
+		case <-ctx.Done():
+			t.flushAll(context.Background())
+			return ctx.Err()
+		case evt := <-events:
+			t.recordEvent(evt)
+		case <-flushTicker.C:
+			t.flushExpired(ctx)
+		}
+	}
+}
+
+func (t *Tracker) embeddedWindowLoop(ctx context.Context, events chan<- repoEvent) {
 	interval := t.cfg.Session.PollInterval.Duration()
 	if interval <= 0 {
-		interval = 5 * time.Second
+		interval = 1 * time.Second
 	}
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
-		if err := t.pollWindow(ctx, events); err != nil {
-			log.Printf("window poll failed: %v", err)
-		}
-
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-		}
-	}
-}
-
-func (t *Tracker) pollWindow(ctx context.Context, events chan<- repoEvent) error {
-	machine := t.cfg.ActivityWatch.Machine
-	if machine == "" {
-		log.Printf("window poll skipped: machine name not configured")
-		return nil
-	}
-
-	windowEvents, err := t.awClient.FetchWindowEvents(ctx, machine, t.windowLast, windowPollLimit)
-	if err != nil {
-		if errors.Is(err, activitywatch.ErrWindowBucketMissing) {
-			if !t.windowBucketWarned {
-				log.Printf("aw-watcher-window bucket aw-watcher-window_%s not found; start aw-watcher-window on this machine or update the machine name in config", machine)
-				t.windowBucketWarned = true
+			window, err := watcher.GetActiveWindow()
+			if err != nil {
+				log.Printf("Failed to get active window: %v", err)
+				continue
 			}
-			return nil
-		}
-		return err
-	}
 
-	if len(windowEvents) == 0 {
-		return nil
-	}
+			if window.App == "" && window.Title == "" {
+				continue
+			}
 
-	if t.windowBucketWarned {
-		t.windowBucketWarned = false
-	}
+			app := strings.ToLower(window.App)
+			title := strings.ToLower(window.Title)
 
-	var maxTime time.Time
-	for _, evt := range windowEvents {
-		if evt.Timestamp.After(maxTime) {
-			maxTime = evt.Timestamp
-		}
+			if !matchesKnownIDE(app, title) {
+				continue
+			}
 
-		log.Printf("Window event app=%q title=%q duration=%.2fs", evt.Data.App, evt.Data.Title, evt.Duration)
+			repo, ok := t.matchCachedRepo(title)
+			if !ok {
+				continue
+			}
 
-		repo, ok := t.findRepoForWindow(evt.Data)
-		if !ok {
-			continue
-		}
-
-		select {
-		case events <- repoEvent{repo: repo, when: evt.Timestamp, path: fmt.Sprintf("[window] %s", evt.Data.Title)}:
-		case <-ctx.Done():
-			return ctx.Err()
+			select {
+			case events <- repoEvent{repo: repo, when: time.Now(), path: fmt.Sprintf("[window] %s - %s", window.App, window.Title)}:
+			case <-ctx.Done():
+				return
+			}
 		}
 	}
-
-	if maxTime.After(t.windowLast) {
-		t.windowLast = maxTime
-	}
-
-	return nil
 }
 
 var knownIDEApps = []string{
 	"code",
 	"code-oss",
 	"visual studio code",
+	"vscode",
 	"idea",
 	"intellij",
 	"clion",
@@ -192,25 +210,20 @@ var knownIDEApps = []string{
 	"rider",
 	"dataspell",
 	"rubymine",
+	"vim",
+	"nvim",
+	"neovim",
+	"emacs",
+	"sublime",
 }
 
-func (t *Tracker) findRepoForWindow(data activitywatch.WindowData) (gitinfo.Info, bool) {
-	app := strings.ToLower(data.App)
-	title := strings.ToLower(data.Title)
-
-	if app == "" && title == "" {
-		return gitinfo.Info{}, false
+func matchesKnownIDE(app, title string) bool {
+	for _, candidate := range knownIDEApps {
+		if strings.Contains(app, candidate) || strings.Contains(title, candidate) {
+			return true
+		}
 	}
-
-	if !matchesKnownIDE(app, title) {
-		return gitinfo.Info{}, false
-	}
-
-	if repo, ok := t.matchCachedRepo(title); ok {
-		return repo, true
-	}
-
-	return gitinfo.Info{}, false
+	return false
 }
 
 func (t *Tracker) matchCachedRepo(lowerTitle string) (gitinfo.Info, bool) {
@@ -228,7 +241,12 @@ func (t *Tracker) matchCachedRepo(lowerTitle string) (gitinfo.Info, bool) {
 }
 
 func (t *Tracker) repoScanLoop(ctx context.Context) {
-	ticker := time.NewTicker(repoScanInterval)
+	rescanInterval := time.Duration(t.cfg.Git.RescanIntervalMin) * time.Minute
+	if rescanInterval == 0 {
+		rescanInterval = 5 * time.Minute
+	}
+
+	ticker := time.NewTicker(rescanInterval)
 	defer ticker.Stop()
 
 	for {
@@ -331,15 +349,6 @@ func (t *Tracker) scanRoot(root string, maxDepth int, dest map[string]gitinfo.In
 	}
 }
 
-func matchesKnownIDE(app, title string) bool {
-	for _, candidate := range knownIDEApps {
-		if strings.Contains(app, candidate) || strings.Contains(title, candidate) {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *Tracker) recordEvent(evt repoEvent) {
 	branch, err := gitinfo.CurrentBranch(evt.repo.Path)
 	if err != nil {
@@ -408,7 +417,8 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 		return nil
 	}
 
-	bucketID := bucketIDForRepo(t.cfg.ActivityWatch.BucketPrefix, sess.Repo.Name)
+	// Bucket name format: user.repoName.branch
+	bucketID := bucketIDForSession(sess.Repo.User, sess.Repo.Name, sess.Branch)
 
 	data := map[string]any{
 		"gitUser":    sess.Repo.User,
@@ -438,13 +448,27 @@ func (t *Tracker) publishSession(ctx context.Context, sess *session.State) error
 
 var bucketSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
 
-func bucketIDForRepo(prefix, repoName string) string {
-	repoID := bucketSanitizer.ReplaceAllString(strings.ToLower(repoName), "-")
-	repoID = strings.Trim(repoID, "-")
-	if prefix == "" {
-		return repoID
+func bucketIDForSession(user, repoName, branch string) string {
+	// Format: user.repoName.branch
+	user = bucketSanitizer.ReplaceAllString(strings.ToLower(user), "-")
+	user = strings.Trim(user, "-")
+	if user == "" {
+		user = "unknown"
 	}
-	return fmt.Sprintf("%s.%s", prefix, repoID)
+
+	repoName = bucketSanitizer.ReplaceAllString(strings.ToLower(repoName), "-")
+	repoName = strings.Trim(repoName, "-")
+	if repoName == "" {
+		repoName = "unknown"
+	}
+
+	branch = bucketSanitizer.ReplaceAllString(strings.ToLower(branch), "-")
+	branch = strings.Trim(branch, "-")
+	if branch == "" {
+		branch = "unknown"
+	}
+
+	return fmt.Sprintf("%s.%s.%s", user, repoName, branch)
 }
 
 type repoEvent struct {

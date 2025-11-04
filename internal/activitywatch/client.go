@@ -38,6 +38,43 @@ func NewClient(cfg config.ActivityWatchConfig) *Client {
 	}
 }
 
+// Heartbeat sends a heartbeat event to merge with existing events in a bucket.
+func (c *Client) Heartbeat(ctx context.Context, bucketID, bucketType string, event Event, pulsetime float64) error {
+	if err := c.ensureBucket(ctx, bucketID, bucketType); err != nil {
+		return err
+	}
+
+	payload := map[string]any{
+		"timestamp": event.Timestamp.UTC().Format(time.RFC3339Nano),
+		"duration":  event.Duration.Seconds(),
+		"data":      event.Data,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal event: %w", err)
+	}
+
+	url := c.buildURL("api/0/buckets", bucketID, fmt.Sprintf("heartbeat?pulsetime=%f", pulsetime))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("post heartbeat: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("heartbeat failed: status %s", resp.Status)
+	}
+
+	return nil
+}
+
 // RecordEvent ensures a bucket exists and posts the given event.
 func (c *Client) RecordEvent(ctx context.Context, bucketID, bucketType string, event Event) error {
 	if err := c.ensureBucket(ctx, bucketID, bucketType); err != nil {

@@ -1,5 +1,5 @@
 # Use a minimal base image
-FROM debian:bullseye-slim
+FROM ubuntu:22.04
 
 # Install necessary runtime dependencies
 RUN apt-get update && apt-get install -y \
