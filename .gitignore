@@ -1,6 +1,5 @@
 # Binaries
 bin/
-awagent
 *.exe
 *.dll
 *.so
